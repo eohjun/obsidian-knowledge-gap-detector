@@ -1,6 +1,6 @@
 /**
  * Model Configurations
- * 모델별 설정 및 메타데이터
+ * AI Provider 및 모델 설정
  */
 
 import type { AIProviderType } from './ai-providers';
@@ -9,109 +9,98 @@ export interface ModelConfig {
   id: string;
   displayName: string;
   provider: AIProviderType;
-  inputCostPer1M: number;
-  outputCostPer1M: number;
-  maxInputTokens: number;
-  maxOutputTokens: number;
+  maxTokens: number;
+  inputCostPer1M?: number;
+  outputCostPer1M?: number;
 }
 
 export const MODEL_CONFIGS: Record<string, ModelConfig> = {
-  // Claude Models
+  // Claude models
   'claude-sonnet-4-5-20250929': {
     id: 'claude-sonnet-4-5-20250929',
     displayName: 'Claude Sonnet 4.5',
     provider: 'claude',
+    maxTokens: 16384,
     inputCostPer1M: 3.0,
     outputCostPer1M: 15.0,
-    maxInputTokens: 200000,
-    maxOutputTokens: 16384,
+  },
+  'claude-opus-4-5-20251101': {
+    id: 'claude-opus-4-5-20251101',
+    displayName: 'Claude Opus 4.5',
+    provider: 'claude',
+    maxTokens: 32768,
+    inputCostPer1M: 15.0,
+    outputCostPer1M: 75.0,
   },
   'claude-3-5-haiku-20241022': {
     id: 'claude-3-5-haiku-20241022',
     displayName: 'Claude 3.5 Haiku',
     provider: 'claude',
+    maxTokens: 8192,
     inputCostPer1M: 0.8,
     outputCostPer1M: 4.0,
-    maxInputTokens: 200000,
-    maxOutputTokens: 8192,
   },
 
-  // OpenAI Models
-  'gpt-4o': {
-    id: 'gpt-4o',
-    displayName: 'GPT-4o',
+  // OpenAI models
+  'gpt-5.2': {
+    id: 'gpt-5.2',
+    displayName: 'GPT-5.2',
     provider: 'openai',
-    inputCostPer1M: 2.5,
-    outputCostPer1M: 10.0,
-    maxInputTokens: 128000,
-    maxOutputTokens: 16384,
+    maxTokens: 32768,
+    inputCostPer1M: 1.75,
+    outputCostPer1M: 14.0,
   },
   'gpt-4o-mini': {
     id: 'gpt-4o-mini',
-    displayName: 'GPT-4o Mini (Recommended)',
+    displayName: 'GPT-4o Mini',
     provider: 'openai',
+    maxTokens: 16384,
     inputCostPer1M: 0.15,
     outputCostPer1M: 0.6,
-    maxInputTokens: 128000,
-    maxOutputTokens: 16384,
-  },
-  'gpt-4-turbo': {
-    id: 'gpt-4-turbo',
-    displayName: 'GPT-4 Turbo',
-    provider: 'openai',
-    inputCostPer1M: 10.0,
-    outputCostPer1M: 30.0,
-    maxInputTokens: 128000,
-    maxOutputTokens: 4096,
   },
 
-  // Gemini Models
+  // Gemini models
+  'gemini-3-flash-preview': {
+    id: 'gemini-3-flash-preview',
+    displayName: 'Gemini 3 Flash',
+    provider: 'gemini',
+    maxTokens: 65536,
+    inputCostPer1M: 0.5,
+    outputCostPer1M: 3.0,
+  },
+  'gemini-3-pro-preview': {
+    id: 'gemini-3-pro-preview',
+    displayName: 'Gemini 3 Pro',
+    provider: 'gemini',
+    maxTokens: 65536,
+    inputCostPer1M: 2.5,
+    outputCostPer1M: 10.0,
+  },
   'gemini-2.0-flash': {
     id: 'gemini-2.0-flash',
     displayName: 'Gemini 2.0 Flash',
     provider: 'gemini',
+    maxTokens: 8192,
     inputCostPer1M: 0.075,
     outputCostPer1M: 0.3,
-    maxInputTokens: 1000000,
-    maxOutputTokens: 8192,
-  },
-  'gemini-1.5-pro': {
-    id: 'gemini-1.5-pro',
-    displayName: 'Gemini 1.5 Pro',
-    provider: 'gemini',
-    inputCostPer1M: 1.25,
-    outputCostPer1M: 5.0,
-    maxInputTokens: 2000000,
-    maxOutputTokens: 8192,
-  },
-  'gemini-1.5-flash': {
-    id: 'gemini-1.5-flash',
-    displayName: 'Gemini 1.5 Flash',
-    provider: 'gemini',
-    inputCostPer1M: 0.075,
-    outputCostPer1M: 0.3,
-    maxInputTokens: 1000000,
-    maxOutputTokens: 8192,
   },
 
-  // Grok Models
-  'grok-3-mini-fast': {
-    id: 'grok-3-mini-fast',
-    displayName: 'Grok 3 Mini Fast',
+  // Grok models
+  'grok-4-1-fast': {
+    id: 'grok-4-1-fast',
+    displayName: 'Grok 4.1 Fast',
     provider: 'grok',
-    inputCostPer1M: 0.3,
-    outputCostPer1M: 0.5,
-    maxInputTokens: 131072,
-    maxOutputTokens: 131072,
-  },
-  'grok-3-fast': {
-    id: 'grok-3-fast',
-    displayName: 'Grok 3 Fast',
-    provider: 'grok',
+    maxTokens: 16384,
     inputCostPer1M: 3.0,
     outputCostPer1M: 15.0,
-    maxInputTokens: 131072,
-    maxOutputTokens: 131072,
+  },
+  'grok-4-1-fast-non-reasoning': {
+    id: 'grok-4-1-fast-non-reasoning',
+    displayName: 'Grok 4.1 Fast (Non-Reasoning)',
+    provider: 'grok',
+    maxTokens: 16384,
+    inputCostPer1M: 0.6,
+    outputCostPer1M: 4.0,
   },
 };
 
@@ -123,6 +112,13 @@ export function getModelsByProvider(provider: AIProviderType): ModelConfig[] {
 }
 
 /**
+ * 모델 설정 조회
+ */
+export function getModelConfig(modelId: string): ModelConfig | undefined {
+  return MODEL_CONFIGS[modelId];
+}
+
+/**
  * 비용 계산 유틸리티
  */
 export function calculateCost(
@@ -131,9 +127,21 @@ export function calculateCost(
   outputTokens: number
 ): number {
   const config = MODEL_CONFIGS[modelId];
-  if (!config) return 0;
+  if (!config || !config.inputCostPer1M || !config.outputCostPer1M) return 0;
 
   const inputCost = (inputTokens / 1_000_000) * config.inputCostPer1M;
   const outputCost = (outputTokens / 1_000_000) * config.outputCostPer1M;
   return inputCost + outputCost;
+}
+
+/**
+ * OpenAI Reasoning 모델 여부 확인
+ * gpt-5.x, o1, o3 시리즈는 max_completion_tokens 사용 필요
+ */
+export function isOpenAIReasoningModel(modelId: string): boolean {
+  return (
+    modelId.startsWith('gpt-5') ||
+    modelId.startsWith('o1') ||
+    modelId.startsWith('o3')
+  );
 }

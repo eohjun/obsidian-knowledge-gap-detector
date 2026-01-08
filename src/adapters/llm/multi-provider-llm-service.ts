@@ -11,6 +11,7 @@ import type {
   ExplorationSuggestion,
 } from '../../core/domain/interfaces/llm-service.interface';
 import { AIProviderType, AI_PROVIDERS } from '../../core/domain/constants';
+import { isOpenAIReasoningModel } from '../../core/domain/constants/model-configs';
 
 export interface MultiProviderLLMConfig {
   provider: AIProviderType;
@@ -245,6 +246,21 @@ Provide a brief description (2-3 sentences) of what this concept likely refers t
     maxTokens: number
   ): Promise<LLMResponse> {
     try {
+      // OpenAI Reasoning 모델 (gpt-5.x, o1, o3)은 max_completion_tokens 사용
+      const isReasoning = isOpenAIReasoningModel(config.model);
+
+      const requestBody: Record<string, unknown> = {
+        model: config.model,
+        messages: messages.map((m) => ({ role: m.role, content: m.content })),
+      };
+
+      if (isReasoning) {
+        // Reasoning 모델은 더 많은 토큰 예산 필요 (추론에 사용됨)
+        requestBody.max_completion_tokens = Math.max(maxTokens * 4, 4096);
+      } else {
+        requestBody.max_tokens = maxTokens;
+      }
+
       const response = await requestUrl({
         url: `${AI_PROVIDERS.openai.endpoint}/chat/completions`,
         method: 'POST',
@@ -252,11 +268,7 @@ Provide a brief description (2-3 sentences) of what this concept likely refers t
           Authorization: `Bearer ${config.apiKey}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          model: config.model,
-          messages: messages.map((m) => ({ role: m.role, content: m.content })),
-          max_tokens: maxTokens,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = response.json;
