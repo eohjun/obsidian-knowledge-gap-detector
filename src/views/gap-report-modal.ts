@@ -3,7 +3,7 @@
  * Displays knowledge gap analysis results in a modal dialog
  */
 
-import { App, Modal, Notice, setIcon } from 'obsidian';
+import { App, Modal, Notice, setIcon, normalizePath } from 'obsidian';
 import type { GapReport } from '../core/domain/interfaces/gap-analyzer.interface';
 import type { KnowledgeGap } from '../core/domain/entities/knowledge-gap';
 import type { SparseRegion } from '../core/domain/entities/sparse-region';
@@ -368,26 +368,43 @@ export class GapReportModal extends Modal {
   private async createNoteForConcept(concept: UndefinedConcept): Promise<void> {
     const content = `# ${concept.name}\n\n<!-- TODO: Define this concept -->\n\n## Related Concepts\n\n${concept.relatedConcepts.slice(0, 5).map((c) => `- [[${c}]]`).join('\n')}\n\n## Mentioned In\n\n${concept.mentionedIn.slice(0, 10).map((n) => `- [[${n.split('/').pop()?.replace('.md', '') || n}]]`).join('\n')}\n`;
 
+    // Cross-platform: use normalizePath for path consistency
+    const path = normalizePath(`${concept.name}.md`);
+
     try {
-      const path = `${concept.name}.md`;
       await this.app.vault.create(path, content);
       new Notice(`Created note: ${concept.name}`);
       await this.app.workspace.openLinkText(path, '');
     } catch (error) {
-      new Notice(`Failed to create note: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Cross-platform: treat "already exists" as success (common on iOS/Android sync)
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('already exists') || errorMessage.includes('File exists')) {
+        new Notice(`Note already exists: ${concept.name}`);
+        await this.app.workspace.openLinkText(path, '');
+      } else {
+        new Notice(`Failed to create note: ${errorMessage}`);
+      }
     }
   }
 
   private async exportReport(): Promise<void> {
     const markdown = this.presenter.formatReport(this.report);
-    const filename = `Knowledge-Gap-Report-${new Date().toISOString().split('T')[0]}.md`;
+    // Cross-platform: use normalizePath for path consistency
+    const filename = normalizePath(`Knowledge-Gap-Report-${new Date().toISOString().split('T')[0]}.md`);
 
     try {
       await this.app.vault.create(filename, markdown);
       new Notice(`Report exported: ${filename}`);
       await this.app.workspace.openLinkText(filename, '');
     } catch (error) {
-      new Notice(`Failed to export report: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Cross-platform: treat "already exists" as success (common on iOS/Android sync)
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('already exists') || errorMessage.includes('File exists')) {
+        new Notice(`Report file already exists, opening: ${filename}`);
+        await this.app.workspace.openLinkText(filename, '');
+      } else {
+        new Notice(`Failed to export report: ${errorMessage}`);
+      }
     }
   }
 
