@@ -22,7 +22,7 @@ An Obsidian plugin that detects knowledge gaps in your vault using embedding ana
 ### 💡 LLM-Powered Suggestions (Optional)
 - Infers topics for sparse regions
 - Generates content suggestions for undefined concepts
-- Requires OpenAI API key
+- Multi-provider support: **Claude**, **OpenAI**, **Gemini**, **Grok**
 
 ## Requirements
 
@@ -61,12 +61,22 @@ An Obsidian plugin that detects knowledge gaps in your vault using embedding ana
 
 | Setting | Description | Default |
 |---------|-------------|---------|
-| OpenAI API Key | For LLM-powered suggestions | (empty) |
-| LLM Model | Model for topic inference | gpt-4o-mini |
+| AI Provider | LLM provider (Claude, OpenAI, Gemini, Grok) | claude |
+| API Key | API key for selected provider | (empty) |
+| LLM Model | Model for topic inference | claude-sonnet-4-5-20250929 |
 | Cluster Count | K-means cluster count | 10 |
 | Min Mentions | Minimum mentions for undefined concepts | 2 |
 | Sparse Threshold | Density threshold for sparse regions | 0.3 |
 | Exclude Folders | Folders to skip during analysis | 06_Meta, 09_Embedded, templates, .obsidian |
+
+#### Supported Models
+
+| Provider | Models |
+|----------|--------|
+| Claude | claude-sonnet-4-5, claude-opus-4-5, claude-3-5-haiku |
+| OpenAI | gpt-5.2, gpt-4o-mini |
+| Gemini | gemini-3-flash-preview, gemini-3-pro-preview, gemini-2.0-flash |
+| Grok | grok-4-1-fast, grok-4-1-fast-non-reasoning |
 
 ## Architecture
 
