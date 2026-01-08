@@ -10,6 +10,7 @@ import { GapReportModal } from './views/gap-report-modal';
 
 // Domain imports
 import type { GapReport } from './core/domain/interfaces/gap-analyzer.interface';
+import { AIProviderType } from './core/domain/constants';
 
 // Application imports
 import { AnalyzeGapsUseCase } from './core/application/use-cases/analyze-gaps';
@@ -20,7 +21,7 @@ import { FindUndefinedConceptsUseCase } from './core/application/use-cases/find-
 import { VaultEmbeddingsReader } from './adapters/embeddings/vault-embeddings-reader';
 import { ObsidianLinkGraphReader } from './adapters/graph/obsidian-link-graph-reader';
 import { KMeansClusteringService } from './adapters/clustering/kmeans-clustering-service';
-import { OpenAILLMService } from './adapters/llm/openai-llm-service';
+import { MultiProviderLLMService } from './adapters/llm/multi-provider-llm-service';
 
 export default class KnowledgeGapDetectorPlugin extends Plugin {
   settings!: KnowledgeGapSettings;
@@ -29,7 +30,7 @@ export default class KnowledgeGapDetectorPlugin extends Plugin {
   private embeddingReader!: VaultEmbeddingsReader;
   private linkGraphReader!: ObsidianLinkGraphReader;
   private clusteringService!: KMeansClusteringService;
-  private llmService!: OpenAILLMService;
+  private llmService!: MultiProviderLLMService;
 
   // Use cases
   private analyzeGapsUseCase!: AnalyzeGapsUseCase;
@@ -73,8 +74,20 @@ export default class KnowledgeGapDetectorPlugin extends Plugin {
     await this.saveData(this.settings);
     // Update LLM service with new settings
     if (this.llmService) {
-      this.llmService.setApiKey(this.settings.openaiApiKey);
+      const provider = this.settings.ai.provider;
+      this.llmService.updateConfig({
+        provider,
+        apiKey: this.settings.ai.apiKeys[provider] ?? '',
+        model: this.settings.ai.models[provider],
+      });
     }
+  }
+
+  /**
+   * API 키 테스트 (Settings Tab에서 호출)
+   */
+  async testApiKey(provider: AIProviderType, apiKey: string): Promise<boolean> {
+    return this.llmService.testApiKey(provider, apiKey);
   }
 
   private initializeServices(): void {
@@ -82,9 +95,12 @@ export default class KnowledgeGapDetectorPlugin extends Plugin {
     this.embeddingReader = new VaultEmbeddingsReader(this.app.vault);
     this.linkGraphReader = new ObsidianLinkGraphReader(this.app.vault);
     this.clusteringService = new KMeansClusteringService();
-    this.llmService = new OpenAILLMService({
-      apiKey: this.settings.openaiApiKey,
-      model: this.settings.llmModel,
+
+    const provider = this.settings.ai.provider;
+    this.llmService = new MultiProviderLLMService({
+      provider,
+      apiKey: this.settings.ai.apiKeys[provider] ?? '',
+      model: this.settings.ai.models[provider],
     });
 
     // Set exclusion folders
@@ -174,7 +190,7 @@ export default class KnowledgeGapDetectorPlugin extends Plugin {
         clusterCount: this.settings.clusterCount,
         sparsityThreshold: this.settings.sparseDensityThreshold,
         minMentions: this.settings.minMentionsForUndefined,
-        useLLM: this.settings.enableLLMSuggestions && this.llmService.isAvailable(),
+        useLLM: this.settings.ai.enabled && this.llmService.isAvailable(),
         maxGaps: this.settings.maxGapsInReport,
         excludeFolders: this.settings.excludeFolders,
       });

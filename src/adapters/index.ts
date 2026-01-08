@@ -15,7 +15,8 @@ export { ObsidianLinkGraphReader } from './graph/obsidian-link-graph-reader';
 export { KMeansClusteringService } from './clustering/kmeans-clustering-service';
 
 // LLM Services
-export { OpenAILLMService } from './llm/openai-llm-service';
+export { MultiProviderLLMService } from './llm/multi-provider-llm-service';
+export type { MultiProviderLLMConfig } from './llm/multi-provider-llm-service';
 
 // Presenters
 export { MarkdownReportPresenter } from './presenters/markdown-report-presenter';

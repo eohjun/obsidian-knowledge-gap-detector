@@ -2,12 +2,28 @@
  * Knowledge Gap Detector Plugin Settings
  */
 
-export interface KnowledgeGapSettings {
-  /** OpenAI API Key for LLM-based suggestions */
-  openaiApiKey: string;
+import { AIProviderType, AI_PROVIDERS } from '../core/domain/constants';
 
-  /** LLM model to use */
-  llmModel: string;
+/**
+ * AI 설정 인터페이스
+ */
+export interface AISettings {
+  /** 현재 선택된 프로바이더 */
+  provider: AIProviderType;
+  /** 프로바이더별 API 키 */
+  apiKeys: Partial<Record<AIProviderType, string>>;
+  /** 프로바이더별 선택된 모델 */
+  models: Record<AIProviderType, string>;
+  /** LLM 기반 제안 활성화 */
+  enabled: boolean;
+}
+
+/**
+ * 플러그인 설정 인터페이스
+ */
+export interface KnowledgeGapSettings {
+  /** AI 설정 */
+  ai: AISettings;
 
   /** Number of clusters for K-means (affects sparse region detection) */
   clusterCount: number;
@@ -35,14 +51,20 @@ export interface KnowledgeGapSettings {
 
   /** Use K-means++ initialization */
   useKMeansPlusPlus: boolean;
-
-  /** Show LLM-generated suggestions */
-  enableLLMSuggestions: boolean;
 }
 
 export const DEFAULT_SETTINGS: KnowledgeGapSettings = {
-  openaiApiKey: '',
-  llmModel: 'gpt-4o-mini',
+  ai: {
+    provider: 'openai',
+    apiKeys: {},
+    models: {
+      claude: AI_PROVIDERS.claude.defaultModel,
+      openai: AI_PROVIDERS.openai.defaultModel,
+      gemini: AI_PROVIDERS.gemini.defaultModel,
+      grok: AI_PROVIDERS.grok.defaultModel,
+    },
+    enabled: true,
+  },
   clusterCount: 10,
   minMentionsForUndefined: 2,
   sparseDensityThreshold: 0.3,
@@ -52,5 +74,4 @@ export const DEFAULT_SETTINGS: KnowledgeGapSettings = {
   lastAnalyzedAt: null,
   maxGapsInReport: 50,
   useKMeansPlusPlus: true,
-  enableLLMSuggestions: true,
 };
