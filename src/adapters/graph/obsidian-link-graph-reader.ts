@@ -14,6 +14,16 @@ import type {
 // Regex to match [[wiki links]] including aliases [[link|alias]]
 const WIKI_LINK_REGEX = /\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g;
 
+// File extensions to exclude from link analysis (images, attachments, etc.)
+const EXCLUDED_EXTENSIONS = new Set([
+  '.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp', '.ico',  // Images
+  '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',        // Documents
+  '.mp3', '.wav', '.ogg', '.m4a', '.flac',                          // Audio
+  '.mp4', '.mov', '.avi', '.mkv', '.webm',                          // Video
+  '.zip', '.rar', '.7z', '.tar', '.gz',                             // Archives
+  '.css', '.js', '.json', '.xml', '.html', '.htm',                  // Web files
+]);
+
 export class ObsidianLinkGraphReader implements ILinkGraphReader {
   private linkGraph: LinkGraph | null = null;
   private excludeFolders: string[] = [];
@@ -197,11 +207,29 @@ export class ObsidianLinkGraphReader implements ILinkGraphReader {
     while ((match = WIKI_LINK_REGEX.exec(content)) !== null) {
       const link = match[1].trim();
       if (link && !links.includes(link)) {
+        // Skip links to excluded file types (images, attachments, etc.)
+        if (this.isExcludedFileType(link)) {
+          continue;
+        }
+        // Skip links that point to excluded folders
+        if (this.shouldExclude(link)) {
+          continue;
+        }
         links.push(link);
       }
     }
 
     return links;
+  }
+
+  private isExcludedFileType(link: string): boolean {
+    const lowerLink = link.toLowerCase();
+    for (const ext of EXCLUDED_EXTENSIONS) {
+      if (lowerLink.endsWith(ext)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private extractTags(content: string): string[] {
