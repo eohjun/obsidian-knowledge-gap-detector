@@ -11,6 +11,13 @@
   max-height: 800px;
 }
 
+/* Enable text selection in modal */
+.knowledge-gap-modal .modal-content,
+.knowledge-gap-modal .modal-content * {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
 .knowledge-gap-modal .modal-content {
   height: 100%;
   display: flex;
