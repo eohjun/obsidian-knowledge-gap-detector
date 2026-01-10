@@ -323,7 +323,8 @@ export class MarkdownReportPresenter {
 
   private extractNoteName(path: string): string {
     // Extract filename without extension from path
-    const parts = path.split('/');
+    // Cross-platform: handle both forward and back slashes
+    const parts = path.split(/[/\\]/);
     const filename = parts[parts.length - 1];
     return filename.replace(/\.md$/, '');
   }

@@ -651,3 +651,238 @@
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* ============================================
+   Mobile Responsive Styles
+   ============================================ */
+
+/* Tablet breakpoint */
+@media screen and (max-width: 768px) {
+  .knowledge-gap-modal {
+    width: 95vw;
+    max-width: none;
+    height: 90vh;
+    max-height: none;
+  }
+
+  .gap-report-header {
+    padding: 16px;
+  }
+
+  .gap-report-title-container h2 {
+    font-size: 1.2em;
+  }
+
+  .gap-report-stats {
+    gap: 8px;
+  }
+
+  .stat-badge {
+    padding: 6px 10px;
+    font-size: 0.85em;
+  }
+
+  .gap-report-tabs {
+    padding: 0 16px 12px;
+    gap: 2px;
+  }
+
+  .gap-report-tab {
+    padding: 10px 12px;
+    font-size: 0.85em;
+  }
+
+  .gap-report-content {
+    padding: 16px;
+  }
+
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Mobile breakpoint */
+@media screen and (max-width: 480px) {
+  .knowledge-gap-modal {
+    width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .knowledge-gap-modal .modal-content {
+    border-radius: 0;
+  }
+
+  .gap-report-header {
+    padding: 12px;
+  }
+
+  .gap-report-title-container {
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .gap-report-title-container h2 {
+    font-size: 1.1em;
+  }
+
+  .gap-report-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .gap-report-icon svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* Stats as horizontal scroll on mobile */
+  .gap-report-stats {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    margin: 0 -12px 12px;
+    padding-left: 12px;
+    padding-right: 12px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .stat-badge {
+    flex-shrink: 0;
+    padding: 8px 12px;
+    min-width: fit-content;
+  }
+
+  .gap-report-actions {
+    width: 100%;
+  }
+
+  .gap-report-actions button {
+    flex: 1;
+    padding: 10px 12px;
+    min-height: 44px; /* Touch-friendly minimum */
+  }
+
+  /* Tabs as horizontal scroll */
+  .gap-report-tabs {
+    padding: 0 12px 12px;
+    margin: 0 -12px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .gap-report-tab {
+    padding: 12px 14px;
+    min-height: 44px; /* Touch-friendly minimum */
+    font-size: 0.9em;
+  }
+
+  .gap-report-content {
+    padding: 12px;
+  }
+
+  /* Cards stack better on mobile */
+  .gap-card,
+  .sparse-card {
+    padding: 14px;
+  }
+
+  .gap-card-header h4,
+  .sparse-card-header h4 {
+    font-size: 0.95em;
+  }
+
+  /* Table improvements for mobile */
+  .undefined-list {
+    margin: 0 -12px;
+    padding: 0 12px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .undefined-table {
+    min-width: 500px; /* Force horizontal scroll for readability */
+  }
+
+  .undefined-table th,
+  .undefined-table td {
+    padding: 10px 12px;
+  }
+
+  .undefined-table button {
+    padding: 8px 12px;
+    min-height: 36px;
+    font-size: 0.85em;
+  }
+
+  /* Touch-friendly links */
+  .internal-link {
+    padding: 4px 0;
+    display: inline-block;
+  }
+
+  /* Better spacing for recommendations */
+  .recommendations-list {
+    padding-left: 20px;
+  }
+
+  .recommendations-list li {
+    margin-bottom: 16px;
+  }
+
+  /* Density bar adjustments */
+  .density-container {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .density-bar {
+    order: 3;
+    width: 100%;
+    height: 10px;
+  }
+
+  .density-label {
+    order: 1;
+  }
+
+  .density-value {
+    order: 2;
+    min-width: auto;
+  }
+
+  /* Better touch targets for nearby notes */
+  .nearby-notes .internal-link,
+  .gap-related .internal-link {
+    padding: 6px 2px;
+    margin-right: 8px;
+  }
+}
+
+/* ============================================
+   Accessibility Improvements
+   ============================================ */
+
+/* Focus visible for keyboard navigation */
+.gap-report-tab:focus-visible,
+.stat-badge:focus-visible,
+button:focus-visible,
+.internal-link:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .density-fill {
+    transition: none;
+  }
+
+  .gap-report-tab {
+    transition: none;
+  }
+
+  .loading-spinner {
+    animation: none;
+    border-top-color: var(--interactive-accent);
+  }
+}
