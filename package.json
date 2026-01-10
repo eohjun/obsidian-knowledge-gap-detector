@@ -1,6 +1,6 @@
 {
   "name": "obsidian-knowledge-gap-detector",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Detect knowledge gaps in your vault using embedding-based cluster analysis",
   "main": "main.js",
   "scripts": {

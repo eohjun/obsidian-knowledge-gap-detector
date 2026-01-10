@@ -1,7 +1,7 @@
 {
   "id": "knowledge-gap-detector",
   "name": "Knowledge Gap Detector",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "minAppVersion": "1.0.0",
   "description": "Detect knowledge gaps in your vault using embedding-based cluster analysis and link graph analysis",
   "author": "eohjun",

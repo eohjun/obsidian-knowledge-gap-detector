@@ -4,7 +4,12 @@
  */
 
 import { Plugin, Notice } from 'obsidian';
-import { KnowledgeGapSettings, DEFAULT_SETTINGS } from './settings/settings';
+import {
+  KnowledgeGapSettings,
+  DEFAULT_SETTINGS,
+  serializeGapReport,
+  deserializeGapReport,
+} from './settings/settings';
 import { KnowledgeGapSettingsTab } from './settings/settings-tab';
 import { GapReportModal } from './views/gap-report-modal';
 
@@ -68,6 +73,17 @@ export default class KnowledgeGapDetectorPlugin extends Plugin {
 
   async loadSettings(): Promise<void> {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+
+    // Restore last report if available
+    if (this.settings.lastReport) {
+      try {
+        this.lastReport = deserializeGapReport(this.settings.lastReport);
+        console.log('Restored last gap report from', this.lastReport.analyzedAt);
+      } catch (error) {
+        console.warn('Failed to restore last gap report:', error);
+        this.lastReport = null;
+      }
+    }
   }
 
   async saveSettings(): Promise<void> {
@@ -197,8 +213,9 @@ export default class KnowledgeGapDetectorPlugin extends Plugin {
 
       this.lastReport = report;
 
-      // Update last analyzed timestamp
+      // Update last analyzed timestamp and persist report
       this.settings.lastAnalyzedAt = Date.now();
+      this.settings.lastReport = serializeGapReport(report);
       await this.saveSettings();
 
       notice.hide();
@@ -308,10 +325,12 @@ export default class KnowledgeGapDetectorPlugin extends Plugin {
     }
   }
 
-  private clearCache(): void {
+  private async clearCache(): Promise<void> {
     this.embeddingReader.clearCache();
     this.linkGraphReader.clearCache();
     this.lastReport = null;
+    this.settings.lastReport = null;
+    await this.saveSettings();
     new Notice('Analysis cache cleared');
   }
 

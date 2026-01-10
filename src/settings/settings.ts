@@ -3,6 +3,45 @@
  */
 
 import { AIProviderType, AI_PROVIDERS } from '../core/domain/constants';
+import type { GapReport } from '../core/domain/interfaces/gap-analyzer.interface';
+import type { KnowledgeGap } from '../core/domain/entities/knowledge-gap';
+import type { SparseRegion } from '../core/domain/entities/sparse-region';
+import type { UndefinedConcept } from '../core/domain/entities/undefined-concept';
+import type { AnalyzeOptions } from '../core/domain/interfaces/gap-analyzer.interface';
+
+/**
+ * Serialized version of GapReport for persistence
+ * Date objects are stored as ISO strings
+ */
+export interface SerializedGapReport {
+  analyzedAt: string; // ISO date string
+  totalNotesAnalyzed: number;
+  totalEmbeddings: number;
+  sparseRegions: SparseRegion[];
+  undefinedConcepts: UndefinedConcept[];
+  gaps: KnowledgeGap[];
+  options: AnalyzeOptions;
+}
+
+/**
+ * Serialize GapReport for storage
+ */
+export function serializeGapReport(report: GapReport): SerializedGapReport {
+  return {
+    ...report,
+    analyzedAt: report.analyzedAt.toISOString(),
+  };
+}
+
+/**
+ * Deserialize GapReport from storage
+ */
+export function deserializeGapReport(serialized: SerializedGapReport): GapReport {
+  return {
+    ...serialized,
+    analyzedAt: new Date(serialized.analyzedAt),
+  };
+}
 
 /**
  * AI 설정 인터페이스
@@ -51,6 +90,9 @@ export interface KnowledgeGapSettings {
 
   /** Use K-means++ initialization */
   useKMeansPlusPlus: boolean;
+
+  /** Last analysis report (persisted for reload) */
+  lastReport: SerializedGapReport | null;
 }
 
 export const DEFAULT_SETTINGS: KnowledgeGapSettings = {
@@ -74,4 +116,5 @@ export const DEFAULT_SETTINGS: KnowledgeGapSettings = {
   lastAnalyzedAt: null,
   maxGapsInReport: 50,
   useKMeansPlusPlus: true,
+  lastReport: null,
 };
