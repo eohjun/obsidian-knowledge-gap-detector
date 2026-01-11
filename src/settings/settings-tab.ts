@@ -1,6 +1,6 @@
 /**
  * Knowledge Gap Detector Settings Tab
- * 다중 프로바이더 지원 설정 UI
+ * Multi-provider support settings UI
  */
 
 import { App, PluginSettingTab, Setting, Notice, DropdownComponent } from 'obsidian';
@@ -48,15 +48,15 @@ export class KnowledgeGapSettingsTab extends PluginSettingTab {
   }
 
   private renderAISection(containerEl: HTMLElement): void {
-    containerEl.createEl('h2', { text: 'AI 설정' });
+    containerEl.createEl('h2', { text: 'AI Settings' });
 
     const currentProvider = this.plugin.settings.ai.provider;
     const currentProviderConfig = AI_PROVIDERS[currentProvider];
 
     // Enable AI toggle
     new Setting(containerEl)
-      .setName('AI 분석 사용')
-      .setDesc('AI를 사용하여 Gap 주제를 추론하고 탐구 제안을 생성합니다')
+      .setName('Enable AI Analysis')
+      .setDesc('Use AI to infer gap topics and generate exploration suggestions')
       .addToggle((toggle) =>
         toggle
           .setValue(this.plugin.settings.ai.enabled)
@@ -68,8 +68,8 @@ export class KnowledgeGapSettingsTab extends PluginSettingTab {
 
     // Provider selection
     new Setting(containerEl)
-      .setName('AI 프로바이더')
-      .setDesc('사용할 AI 서비스를 선택하세요')
+      .setName('AI Provider')
+      .setDesc('Select the AI service to use')
       .addDropdown((dropdown) => {
         Object.entries(AI_PROVIDERS).forEach(([key, config]) => {
           dropdown.addOption(key, config.displayName);
@@ -84,11 +84,11 @@ export class KnowledgeGapSettingsTab extends PluginSettingTab {
 
     // API Key input with Test button
     new Setting(containerEl)
-      .setName(`${currentProviderConfig.displayName} API 키`)
+      .setName(`${currentProviderConfig.displayName} API Key`)
       .setDesc(this.getApiKeyDescription(currentProvider))
       .addText((text) => {
         text
-          .setPlaceholder('API 키 입력')
+          .setPlaceholder('Enter API key')
           .setValue(this.plugin.settings.ai.apiKeys[currentProvider] ?? '')
           .onChange(async (value) => {
             this.plugin.settings.ai.apiKeys[currentProvider] = value;
@@ -99,38 +99,38 @@ export class KnowledgeGapSettingsTab extends PluginSettingTab {
       })
       .addButton((button) => {
         button
-          .setButtonText('테스트')
+          .setButtonText('Test')
           .onClick(async () => {
             const apiKey = this.plugin.settings.ai.apiKeys[currentProvider];
 
             if (!apiKey) {
-              new Notice('API 키를 먼저 입력해주세요.');
+              new Notice('Please enter the API key first.');
               return;
             }
 
             button.setDisabled(true);
-            button.setButtonText('테스트 중...');
+            button.setButtonText('Testing...');
 
             try {
               const isValid = await this.plugin.testApiKey(currentProvider, apiKey);
               if (isValid) {
-                new Notice(`✅ ${currentProviderConfig.displayName} API 키가 유효합니다!`);
+                new Notice(`✅ ${currentProviderConfig.displayName} API key is valid!`);
               } else {
-                new Notice(`❌ ${currentProviderConfig.displayName} API 키가 유효하지 않습니다.`);
+                new Notice(`❌ ${currentProviderConfig.displayName} API key is invalid.`);
               }
             } catch (error) {
-              const message = error instanceof Error ? error.message : '알 수 없는 오류';
-              new Notice(`❌ 테스트 실패: ${message}`);
+              const message = error instanceof Error ? error.message : 'Unknown error';
+              new Notice(`❌ Test failed: ${message}`);
             } finally {
               button.setDisabled(false);
-              button.setButtonText('테스트');
+              button.setButtonText('Test');
             }
           });
       })
       .addExtraButton((button) =>
         button
           .setIcon('external-link')
-          .setTooltip('API 키 발급 페이지 열기')
+          .setTooltip('Open API key page')
           .onClick(() => {
             window.open(this.getApiKeyUrl(currentProvider), '_blank');
           })
@@ -138,8 +138,8 @@ export class KnowledgeGapSettingsTab extends PluginSettingTab {
 
     // Model selection
     new Setting(containerEl)
-      .setName('모델')
-      .setDesc('사용할 모델을 선택하세요')
+      .setName('Model')
+      .setDesc('Select the model to use')
       .addDropdown((dropdown) => {
         this.modelDropdown = dropdown;
         this.populateModelDropdown(dropdown, currentProvider);
@@ -160,9 +160,9 @@ export class KnowledgeGapSettingsTab extends PluginSettingTab {
     infoEl.style.backgroundColor = 'var(--background-secondary)';
     infoEl.style.borderRadius = '5px';
     infoEl.innerHTML = `
-      <p style="margin: 0 0 5px 0;"><strong>📦 Vault Embeddings 연동</strong></p>
-      <p style="margin: 0; font-size: 0.9em;">Sparse Region 분석은 <strong>Vault Embeddings</strong> 플러그인의 임베딩 데이터를 사용합니다.<br>
-      Vault Embeddings에서 "Embed All Notes"를 먼저 실행하세요.</p>
+      <p style="margin: 0 0 5px 0;"><strong>📦 Vault Embeddings Integration</strong></p>
+      <p style="margin: 0; font-size: 0.9em;">Sparse Region analysis uses embedding data from the <strong>Vault Embeddings</strong> plugin.<br>
+      Please run "Embed All Notes" in Vault Embeddings first.</p>
     `;
   }
 
@@ -176,15 +176,15 @@ export class KnowledgeGapSettingsTab extends PluginSettingTab {
   private getApiKeyDescription(provider: AIProviderType): string {
     switch (provider) {
       case 'claude':
-        return 'Anthropic Console에서 발급받을 수 있습니다.';
+        return 'Obtain from Anthropic Console.';
       case 'openai':
-        return 'OpenAI Platform에서 발급받을 수 있습니다.';
+        return 'Obtain from OpenAI Platform.';
       case 'gemini':
-        return 'Google AI Studio에서 발급받을 수 있습니다.';
+        return 'Obtain from Google AI Studio.';
       case 'grok':
-        return 'xAI Console에서 발급받을 수 있습니다.';
+        return 'Obtain from xAI Console.';
       default:
-        return 'API 키를 입력하세요.';
+        return 'Enter the API key.';
     }
   }
 
@@ -204,11 +204,11 @@ export class KnowledgeGapSettingsTab extends PluginSettingTab {
   }
 
   private renderAnalysisSection(containerEl: HTMLElement): void {
-    containerEl.createEl('h2', { text: '분석 설정' });
+    containerEl.createEl('h2', { text: 'Analysis Settings' });
 
     new Setting(containerEl)
-      .setName('클러스터 수')
-      .setDesc('K-means 분석에 사용할 클러스터 수 (기본: 10). 높을수록 세밀한 Gap 탐지')
+      .setName('Cluster Count')
+      .setDesc('Number of clusters for K-means analysis (default: 10). Higher values enable finer gap detection')
       .addSlider((slider) =>
         slider
           .setLimits(3, 30, 1)
@@ -221,8 +221,8 @@ export class KnowledgeGapSettingsTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName('미정의 개념 최소 언급 횟수')
-      .setDesc('[[개념]]이 플래그되려면 최소 몇 번 언급되어야 하는지')
+      .setName('Minimum Mentions for Undefined Concepts')
+      .setDesc('Minimum mentions required before a [[concept]] is flagged')
       .addSlider((slider) =>
         slider
           .setLimits(1, 10, 1)
@@ -235,8 +235,8 @@ export class KnowledgeGapSettingsTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName('Sparse 밀도 임계값')
-      .setDesc('이 임계값 미만의 밀도를 가진 영역이 sparse로 플래그됨 (0-1, 낮을수록 sparse)')
+      .setName('Sparse Density Threshold')
+      .setDesc('Regions with density below this threshold are flagged as sparse (0-1, lower = sparser)')
       .addSlider((slider) =>
         slider
           .setLimits(0.1, 0.9, 0.1)
@@ -249,8 +249,8 @@ export class KnowledgeGapSettingsTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName('리포트 최대 Gap 수')
-      .setDesc('분석 리포트에 표시할 최대 Gap 수')
+      .setName('Maximum Gaps in Report')
+      .setDesc('Maximum number of gaps to display in the analysis report')
       .addSlider((slider) =>
         slider
           .setLimits(10, 100, 10)
@@ -264,11 +264,11 @@ export class KnowledgeGapSettingsTab extends PluginSettingTab {
   }
 
   private renderExclusionSection(containerEl: HTMLElement): void {
-    containerEl.createEl('h2', { text: '제외 설정' });
+    containerEl.createEl('h2', { text: 'Exclusion Settings' });
 
     new Setting(containerEl)
-      .setName('제외 폴더')
-      .setDesc('분석에서 제외할 폴더 (쉼표로 구분)')
+      .setName('Excluded Folders')
+      .setDesc('Folders to exclude from analysis (comma-separated)')
       .addTextArea((text) =>
         text
           .setPlaceholder('templates, .obsidian, archive')
@@ -284,11 +284,11 @@ export class KnowledgeGapSettingsTab extends PluginSettingTab {
   }
 
   private renderAutoAnalysisSection(containerEl: HTMLElement): void {
-    containerEl.createEl('h2', { text: '자동 분석' });
+    containerEl.createEl('h2', { text: 'Auto Analysis' });
 
     new Setting(containerEl)
-      .setName('자동 분석 활성화')
-      .setDesc('주기적으로 Gap 분석을 자동 실행합니다')
+      .setName('Enable Auto Analysis')
+      .setDesc('Automatically run gap analysis periodically')
       .addToggle((toggle) =>
         toggle
           .setValue(this.plugin.settings.autoAnalyze)
@@ -299,8 +299,8 @@ export class KnowledgeGapSettingsTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName('분석 주기 (일)')
-      .setDesc('자동 분석 실행 주기')
+      .setName('Analysis Interval (days)')
+      .setDesc('Interval for auto analysis')
       .addSlider((slider) =>
         slider
           .setLimits(1, 30, 1)
@@ -316,18 +316,18 @@ export class KnowledgeGapSettingsTab extends PluginSettingTab {
     if (this.plugin.settings.lastAnalyzedAt) {
       const lastDate = new Date(this.plugin.settings.lastAnalyzedAt);
       containerEl.createEl('p', {
-        text: `마지막 분석: ${lastDate.toLocaleDateString()} ${lastDate.toLocaleTimeString()}`,
+        text: `Last analysis: ${lastDate.toLocaleDateString()} ${lastDate.toLocaleTimeString()}`,
         cls: 'setting-item-description',
       });
     }
   }
 
   private renderAdvancedSection(containerEl: HTMLElement): void {
-    containerEl.createEl('h2', { text: '고급 설정' });
+    containerEl.createEl('h2', { text: 'Advanced Settings' });
 
     new Setting(containerEl)
-      .setName('K-Means++ 초기화 사용')
-      .setDesc('더 나은 클러스터 초기화를 위해 K-Means++ 사용 (권장)')
+      .setName('Use K-Means++ Initialization')
+      .setDesc('Use K-Means++ for better cluster initialization (recommended)')
       .addToggle((toggle) =>
         toggle
           .setValue(this.plugin.settings.useKMeansPlusPlus)
@@ -339,11 +339,11 @@ export class KnowledgeGapSettingsTab extends PluginSettingTab {
 
     // Reset to defaults
     new Setting(containerEl)
-      .setName('기본값으로 초기화')
-      .setDesc('모든 설정을 기본값으로 초기화합니다 (API 키는 유지)')
+      .setName('Reset to Defaults')
+      .setDesc('Reset all settings to defaults (API keys are preserved)')
       .addButton((button) =>
         button
-          .setButtonText('초기화')
+          .setButtonText('Reset')
           .setWarning()
           .onClick(async () => {
             const apiKeys = { ...this.plugin.settings.ai.apiKeys }; // Preserve API keys
