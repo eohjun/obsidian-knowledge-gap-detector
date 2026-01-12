@@ -31,7 +31,8 @@ export class ObsidianLinkGraphReader implements ILinkGraphReader {
   constructor(private vault: Vault) {}
 
   setExcludeFolders(folders: string[]): void {
-    this.excludeFolders = folders;
+    // Normalize all folders for cross-platform compatibility
+    this.excludeFolders = folders.map((f) => normalizePath(f));
     // Clear cache when filters change
     this.linkGraph = null;
   }

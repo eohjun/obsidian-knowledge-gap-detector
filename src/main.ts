@@ -3,7 +3,7 @@
  * Detects knowledge gaps in your vault using embedding analysis and link graph
  */
 
-import { Plugin, Notice } from 'obsidian';
+import { Plugin, Notice, normalizePath } from 'obsidian';
 import {
   KnowledgeGapSettings,
   DEFAULT_SETTINGS,
@@ -120,7 +120,7 @@ export default class KnowledgeGapDetectorPlugin extends Plugin {
     });
 
     // Set exclusion folders
-    this.linkGraphReader.setExcludeFolders(this.settings.excludeFolders);
+    this.linkGraphReader.setExcludeFolders(this.getNormalizedExcludeFolders());
 
     // Initialize use cases
     this.detectSparseRegionsUseCase = new DetectSparseRegionsUseCase(
@@ -199,7 +199,7 @@ export default class KnowledgeGapDetectorPlugin extends Plugin {
 
     try {
       // Update settings before analysis
-      this.linkGraphReader.setExcludeFolders(this.settings.excludeFolders);
+      this.linkGraphReader.setExcludeFolders(this.getNormalizedExcludeFolders());
 
       // Run analysis
       const report = await this.analyzeGapsUseCase.execute({
@@ -208,7 +208,7 @@ export default class KnowledgeGapDetectorPlugin extends Plugin {
         minMentions: this.settings.minMentionsForUndefined,
         useLLM: this.settings.ai.enabled && this.llmService.isAvailable(),
         maxGaps: this.settings.maxGapsInReport,
-        excludeFolders: this.settings.excludeFolders,
+        excludeFolders: this.getNormalizedExcludeFolders(),
       });
 
       this.lastReport = report;
@@ -249,11 +249,12 @@ export default class KnowledgeGapDetectorPlugin extends Plugin {
     const notice = new Notice('Finding undefined concepts...', 0);
 
     try {
-      this.linkGraphReader.setExcludeFolders(this.settings.excludeFolders);
+      const normalizedExcludeFolders = this.getNormalizedExcludeFolders();
+      this.linkGraphReader.setExcludeFolders(normalizedExcludeFolders);
       const concepts = await this.findUndefinedConceptsUseCase.execute({
         minMentions: this.settings.minMentionsForUndefined,
         maxConcepts: this.settings.maxGapsInReport,
-        excludeFolders: this.settings.excludeFolders,
+        excludeFolders: normalizedExcludeFolders,
       });
 
       notice.hide();
@@ -297,7 +298,7 @@ export default class KnowledgeGapDetectorPlugin extends Plugin {
       const regions = await this.detectSparseRegionsUseCase.execute({
         clusterCount: this.settings.clusterCount,
         sparsityThreshold: this.settings.sparseDensityThreshold,
-        excludeFolders: this.settings.excludeFolders,
+        excludeFolders: this.getNormalizedExcludeFolders(),
       });
 
       notice.hide();
@@ -356,5 +357,12 @@ export default class KnowledgeGapDetectorPlugin extends Plugin {
         this.runAnalysis();
       }, 5000);
     }
+  }
+
+  /**
+   * Get normalized exclude folders for cross-platform compatibility
+   */
+  private getNormalizedExcludeFolders(): string[] {
+    return this.settings.excludeFolders.map((f) => normalizePath(f));
   }
 }
