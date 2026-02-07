@@ -69,6 +69,9 @@ export default class KnowledgeGapDetectorPlugin extends Plugin {
 
   onunload(): void {
     console.log('Unloading Knowledge Gap Detector plugin');
+    this.embeddingReader?.clearCache();
+    this.linkGraphReader?.clearCache();
+    this.lastReport = null;
   }
 
   async loadSettings(): Promise<void> {
