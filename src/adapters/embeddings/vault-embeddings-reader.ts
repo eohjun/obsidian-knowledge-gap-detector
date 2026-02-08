@@ -17,6 +17,8 @@ const EMBEDDINGS_SUBFOLDER = 'embeddings';
 export class VaultEmbeddingsReader implements IEmbeddingReader {
   private cachedIndex: EmbeddingIndex | null = null;
   private embeddingsCache: Map<string, NoteEmbedding> = new Map();
+  private allEmbeddingsCacheTime = 0;
+  private readonly CACHE_TTL_MS = 60000; // 60s TTL
 
   constructor(private vault: Vault) {}
 
@@ -86,8 +88,9 @@ export class VaultEmbeddingsReader implements IEmbeddingReader {
   }
 
   async readAllEmbeddings(): Promise<Map<string, NoteEmbedding>> {
-    // If cache is already populated, return it
-    if (this.embeddingsCache.size > 0) {
+    // TTL cache: return cached if still fresh
+    const now = Date.now();
+    if (this.embeddingsCache.size > 0 && now - this.allEmbeddingsCacheTime < this.CACHE_TTL_MS) {
       return this.embeddingsCache;
     }
 
@@ -115,8 +118,9 @@ export class VaultEmbeddingsReader implements IEmbeddingReader {
       }
     }
 
-    // Update cache
+    // Update cache with TTL
     this.embeddingsCache = embeddings;
+    this.allEmbeddingsCacheTime = Date.now();
 
     return embeddings;
   }
@@ -135,6 +139,7 @@ export class VaultEmbeddingsReader implements IEmbeddingReader {
   clearCache(): void {
     this.cachedIndex = null;
     this.embeddingsCache.clear();
+    this.allEmbeddingsCacheTime = 0;
   }
 
   /**

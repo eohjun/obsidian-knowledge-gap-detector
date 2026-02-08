@@ -296,6 +296,10 @@ Provide a brief description of what this concept might be about.`;
 
     const data = (await response.json()) as OpenAIAPIResponse;
 
+    if (!data.choices || data.choices.length === 0) {
+      throw new Error('OpenAI returned empty choices array');
+    }
+
     return {
       content: data.choices[0]?.message?.content || '',
       usage: data.usage ? {
