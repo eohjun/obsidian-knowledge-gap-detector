@@ -1,154 +1,26 @@
 /**
  * Model Configurations
- * AI Provider 및 모델 설정
+ * Re-exports from obsidian-llm-shared (single source of truth)
  */
 
-import type { AIProviderType } from './ai-providers';
-
-export interface ModelConfig {
-  id: string;
-  displayName: string;
-  provider: AIProviderType;
-  maxTokens: number;
-  inputCostPer1M?: number;
-  outputCostPer1M?: number;
-}
-
-export const MODEL_CONFIGS: Record<string, ModelConfig> = {
-  // Claude models
-  'claude-opus-4-6': {
-    id: 'claude-opus-4-6',
-    displayName: 'Claude Opus 4.6',
-    provider: 'claude',
-    maxTokens: 128000,
-    inputCostPer1M: 5.0,
-    outputCostPer1M: 25.0,
-  },
-  'claude-sonnet-4-6': {
-    id: 'claude-sonnet-4-6',
-    displayName: 'Claude Sonnet 4.6',
-    provider: 'claude',
-    maxTokens: 64000,
-    inputCostPer1M: 3.0,
-    outputCostPer1M: 15.0,
-  },
-  'claude-haiku-4-5-20251001': {
-    id: 'claude-haiku-4-5-20251001',
-    displayName: 'Claude Haiku 4.5',
-    provider: 'claude',
-    maxTokens: 64000,
-    inputCostPer1M: 1.0,
-    outputCostPer1M: 5.0,
-  },
-
-  // OpenAI models
-  'gpt-5.4': {
-    id: 'gpt-5.4',
-    displayName: 'GPT-5.4',
-    provider: 'openai',
-    maxTokens: 128000,
-    inputCostPer1M: 2.5,
-    outputCostPer1M: 15.0,
-  },
-  'gpt-5-mini': {
-    id: 'gpt-5-mini',
-    displayName: 'GPT-5 Mini',
-    provider: 'openai',
-    maxTokens: 128000,
-    inputCostPer1M: 0.25,
-    outputCostPer1M: 2.0,
-  },
-  'gpt-5-nano': {
-    id: 'gpt-5-nano',
-    displayName: 'GPT-5 Nano',
-    provider: 'openai',
-    maxTokens: 128000,
-    inputCostPer1M: 0.05,
-    outputCostPer1M: 0.4,
-  },
-
-  // Gemini models
-  'gemini-3.1-pro-preview': {
-    id: 'gemini-3.1-pro-preview',
-    displayName: 'Gemini 3.1 Pro',
-    provider: 'gemini',
-    maxTokens: 65536,
-    inputCostPer1M: 2.0,
-    outputCostPer1M: 12.0,
-  },
-  'gemini-2.5-flash': {
-    id: 'gemini-2.5-flash',
-    displayName: 'Gemini 2.5 Flash',
-    provider: 'gemini',
-    maxTokens: 65536,
-    inputCostPer1M: 0.3,
-    outputCostPer1M: 2.5,
-  },
-  'gemini-2.0-flash': {
-    id: 'gemini-2.0-flash',
-    displayName: 'Gemini 2.0 Flash',
-    provider: 'gemini',
-    maxTokens: 8192,
-    inputCostPer1M: 0.1,
-    outputCostPer1M: 0.4,
-  },
-
-  // Grok models
-  'grok-4-1-fast': {
-    id: 'grok-4-1-fast',
-    displayName: 'Grok 4.1 Fast',
-    provider: 'grok',
-    maxTokens: 16384,
-    inputCostPer1M: 0.2,
-    outputCostPer1M: 0.5,
-  },
-  'grok-4-1-fast-non-reasoning': {
-    id: 'grok-4-1-fast-non-reasoning',
-    displayName: 'Grok 4.1 Fast (Non-Reasoning)',
-    provider: 'grok',
-    maxTokens: 16384,
-    inputCostPer1M: 0.2,
-    outputCostPer1M: 0.5,
-  },
-};
+export {
+  type AIProviderType,
+  type AIProviderConfig,
+  type ModelConfig,
+  AI_PROVIDERS,
+  MODEL_CONFIGS,
+  getModelsByProvider,
+  getModelConfig,
+  getProviderConfig,
+  isReasoningModel,
+  getEffectiveMaxTokens,
+  getThinkingConfig,
+  calculateCost,
+} from 'obsidian-llm-shared';
 
 /**
- * 프로바이더별 모델 목록 조회
+ * Backward-compatibility alias
+ * @deprecated Use isReasoningModel from obsidian-llm-shared instead
  */
-export function getModelsByProvider(provider: AIProviderType): ModelConfig[] {
-  return Object.values(MODEL_CONFIGS).filter((m) => m.provider === provider);
-}
-
-/**
- * 모델 설정 조회
- */
-export function getModelConfig(modelId: string): ModelConfig | undefined {
-  return MODEL_CONFIGS[modelId];
-}
-
-/**
- * 비용 계산 유틸리티
- */
-export function calculateCost(
-  modelId: string,
-  inputTokens: number,
-  outputTokens: number
-): number {
-  const config = MODEL_CONFIGS[modelId];
-  if (!config || !config.inputCostPer1M || !config.outputCostPer1M) return 0;
-
-  const inputCost = (inputTokens / 1_000_000) * config.inputCostPer1M;
-  const outputCost = (outputTokens / 1_000_000) * config.outputCostPer1M;
-  return inputCost + outputCost;
-}
-
-/**
- * OpenAI Reasoning 모델 여부 확인
- * GPT-5 시리즈는 max_completion_tokens 사용 필요
- */
-export function isOpenAIReasoningModel(modelId: string): boolean {
-  return (
-    modelId.startsWith('gpt-5') ||
-    modelId.startsWith('o4')
-  );
-}
+import { isReasoningModel } from 'obsidian-llm-shared';
+export const isOpenAIReasoningModel = isReasoningModel;

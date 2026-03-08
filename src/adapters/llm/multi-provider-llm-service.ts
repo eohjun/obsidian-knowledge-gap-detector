@@ -10,8 +10,7 @@ import type {
   TopicInferenceResult,
   ExplorationSuggestion,
 } from '../../core/domain/interfaces/llm-service.interface';
-import { AIProviderType, AI_PROVIDERS } from '../../core/domain/constants';
-import { isOpenAIReasoningModel } from '../../core/domain/constants/model-configs';
+import { AIProviderType, AI_PROVIDERS, isReasoningModel } from '../../core/domain/constants';
 
 export interface MultiProviderLLMConfig {
   provider: AIProviderType;
@@ -247,7 +246,7 @@ Provide a brief description (2-3 sentences) of what this concept likely refers t
   ): Promise<LLMResponse> {
     try {
       // OpenAI Reasoning 모델 (gpt-5.x, o1, o3)은 max_completion_tokens 사용
-      const isReasoning = isOpenAIReasoningModel(config.model);
+      const isReasoning = isReasoningModel(config.model);
 
       const requestBody: Record<string, unknown> = {
         model: config.model,
