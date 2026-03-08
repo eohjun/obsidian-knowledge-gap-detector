@@ -1,14 +1,18 @@
 /**
- * OpenAI LLM Service Adapter
+ * OpenAI LLM Service Adapter — 공유 빌더/파서 사용
  * Provides LLM capabilities for gap analysis and topic inference
+ *
+ * 수정: fetch() → requestUrl(), 공유 빌더/파서 전환
  */
 
+import { requestUrl } from 'obsidian';
 import type {
   ILLMService,
   LLMResponse,
   TopicInferenceResult,
   ExplorationSuggestion,
 } from '../../core/domain/interfaces/llm-service.interface';
+import { buildOpenAIBody, parseOpenAIResponse } from 'obsidian-llm-shared';
 
 interface OpenAIConfig {
   apiKey: string;
@@ -20,19 +24,6 @@ interface OpenAIConfig {
 interface OpenAIMessage {
   role: 'system' | 'user' | 'assistant';
   content: string;
-}
-
-interface OpenAIAPIResponse {
-  choices: Array<{
-    message: {
-      content: string;
-    };
-  }>;
-  usage?: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-  };
 }
 
 export class OpenAILLMService implements ILLMService {
@@ -47,23 +38,14 @@ export class OpenAILLMService implements ILLMService {
     };
   }
 
-  /**
-   * Update the API key
-   */
   setApiKey(apiKey: string): void {
     this.config.apiKey = apiKey;
   }
 
-  /**
-   * Check if the service is available (configured)
-   */
   isAvailable(): boolean {
     return this.config.apiKey.length > 0;
   }
 
-  /**
-   * Infer a topic from a list of note titles/excerpts
-   */
   async inferTopic(noteTitles: string[], noteExcerpts?: string[]): Promise<TopicInferenceResult> {
     if (!this.isAvailable()) {
       return {
@@ -98,7 +80,6 @@ What topic connects these notes? Return JSON.`;
         { role: 'user', content: userPrompt },
       ]);
 
-      // Parse JSON response
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]) as {
@@ -113,7 +94,6 @@ What topic connects these notes? Return JSON.`;
         };
       }
 
-      // Fallback: extract topic from text
       return {
         topic: response.split('\n')[0].replace(/["']/g, '').trim() || 'Unknown',
         confidence: 0.5,
@@ -128,9 +108,6 @@ What topic connects these notes? Return JSON.`;
     }
   }
 
-  /**
-   * Generate exploration suggestions for a knowledge gap
-   */
   async generateExplorationSuggestions(
     gapDescription: string,
     relatedNotes: string[],
@@ -162,7 +139,6 @@ Suggest 2-3 exploration areas with questions and subtopics. Return JSON array.`;
         { role: 'user', content: userPrompt },
       ]);
 
-      // Parse JSON response
       const jsonMatch = response.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]) as Array<{
@@ -179,7 +155,6 @@ Suggest 2-3 exploration areas with questions and subtopics. Return JSON array.`;
         }));
       }
 
-      // Fallback: create single suggestion from text
       return [{
         topic: gapDescription,
         questions: this.extractBullets(response),
@@ -192,9 +167,6 @@ Suggest 2-3 exploration areas with questions and subtopics. Return JSON array.`;
     }
   }
 
-  /**
-   * Generate a description for an undefined concept
-   */
   async describeUndefinedConcept(
     conceptName: string,
     contextNotes: string[]
@@ -228,9 +200,6 @@ Provide a brief description of what this concept might be about.`;
     }
   }
 
-  /**
-   * Simple text generation
-   */
   async generate(prompt: string, systemPrompt?: string): Promise<LLMResponse> {
     if (!this.isAvailable()) {
       return {
@@ -246,11 +215,34 @@ Provide a brief description of what this concept might be about.`;
     messages.push({ role: 'user', content: prompt });
 
     try {
-      const response = await this.callOpenAIWithUsage(messages);
+      const body = buildOpenAIBody(messages, this.config.model, {
+        maxTokens: this.config.maxTokens,
+        temperature: this.config.temperature,
+      });
+
+      const response = await requestUrl({
+        url: 'https://api.openai.com/v1/chat/completions',
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.config.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+
+      const result = parseOpenAIResponse(response.json);
+      if (!result.success) {
+        return { success: false, error: result.error };
+      }
+
       return {
         success: true,
-        content: response.content,
-        usage: response.usage,
+        content: result.text,
+        usage: {
+          promptTokens: result.usage.inputTokens,
+          completionTokens: result.usage.outputTokens,
+          totalTokens: result.usage.totalTokens,
+        },
       };
     } catch (error) {
       return {
@@ -260,59 +252,30 @@ Provide a brief description of what this concept might be about.`;
     }
   }
 
-  /**
-   * Make an API call to OpenAI (returns content only)
-   */
   private async callOpenAI(messages: OpenAIMessage[]): Promise<string> {
-    const result = await this.callOpenAIWithUsage(messages);
-    return result.content;
-  }
-
-  /**
-   * Make an API call to OpenAI (returns content and usage)
-   */
-  private async callOpenAIWithUsage(messages: OpenAIMessage[]): Promise<{
-    content: string;
-    usage?: LLMResponse['usage'];
-  }> {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.config.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: this.config.model,
-        messages,
-        max_tokens: this.config.maxTokens,
-        temperature: this.config.temperature,
-      }),
+    const body = buildOpenAIBody(messages, this.config.model, {
+      maxTokens: this.config.maxTokens,
+      temperature: this.config.temperature,
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+    const response = await requestUrl({
+      url: 'https://api.openai.com/v1/chat/completions',
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${this.config.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    const result = parseOpenAIResponse(response.json);
+    if (!result.success) {
+      throw new Error(result.error || 'OpenAI API error');
     }
 
-    const data = (await response.json()) as OpenAIAPIResponse;
-
-    if (!data.choices || data.choices.length === 0) {
-      throw new Error('OpenAI returned empty choices array');
-    }
-
-    return {
-      content: data.choices[0]?.message?.content || '',
-      usage: data.usage ? {
-        promptTokens: data.usage.prompt_tokens,
-        completionTokens: data.usage.completion_tokens,
-        totalTokens: data.usage.total_tokens,
-      } : undefined,
-    };
+    return result.text;
   }
 
-  /**
-   * Extract bullet points from text
-   */
   private extractBullets(text: string): string[] {
     const bullets: string[] = [];
     const lines = text.split('\n');

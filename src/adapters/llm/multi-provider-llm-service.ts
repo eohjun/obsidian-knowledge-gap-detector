@@ -1,6 +1,8 @@
 /**
- * Multi-Provider LLM Service
+ * Multi-Provider LLM Service — 공유 빌더/파서 사용
  * Claude, OpenAI, Gemini, Grok 프로바이더 지원
+ *
+ * 추가: Anthropic extended thinking, Grok reasoning 모델 지원
  */
 
 import { requestUrl } from 'obsidian';
@@ -10,7 +12,13 @@ import type {
   TopicInferenceResult,
   ExplorationSuggestion,
 } from '../../core/domain/interfaces/llm-service.interface';
-import { AIProviderType, AI_PROVIDERS, isReasoningModel } from '../../core/domain/constants';
+import { AIProviderType, AI_PROVIDERS } from '../../core/domain/constants';
+import {
+  buildOpenAIBody, parseOpenAIResponse,
+  buildAnthropicBody, parseAnthropicResponse,
+  buildGeminiBody, parseGeminiResponse, getGeminiGenerateUrl,
+  buildGrokBody, parseGrokResponse,
+} from 'obsidian-llm-shared';
 
 export interface MultiProviderLLMConfig {
   provider: AIProviderType;
@@ -38,9 +46,6 @@ export class MultiProviderLLMService implements ILLMService {
     return this.config.apiKey.length > 0;
   }
 
-  /**
-   * API 키 유효성 테스트
-   */
   async testApiKey(provider: AIProviderType, apiKey: string): Promise<boolean> {
     try {
       const providerConfig = AI_PROVIDERS[provider];
@@ -171,17 +176,21 @@ Provide a brief description (2-3 sentences) of what this concept likely refers t
     config: MultiProviderLLMConfig,
     maxTokens: number = 1024
   ): Promise<LLMResponse> {
-    switch (config.provider) {
-      case 'claude':
-        return this.generateClaude(messages, config, maxTokens);
-      case 'openai':
-        return this.generateOpenAI(messages, config, maxTokens);
-      case 'gemini':
-        return this.generateGemini(messages, config, maxTokens);
-      case 'grok':
-        return this.generateGrok(messages, config, maxTokens);
-      default:
-        return { success: false, content: '', error: 'Unknown provider' };
+    try {
+      switch (config.provider) {
+        case 'claude':
+          return await this.generateClaude(messages, config, maxTokens);
+        case 'openai':
+          return await this.generateOpenAI(messages, config, maxTokens);
+        case 'gemini':
+          return await this.generateGemini(messages, config, maxTokens);
+        case 'grok':
+          return await this.generateGrok(messages, config, maxTokens);
+        default:
+          return { success: false, content: '', error: 'Unknown provider' };
+      }
+    } catch (error) {
+      return this.handleError(error);
     }
   }
 
@@ -190,53 +199,20 @@ Provide a brief description (2-3 sentences) of what this concept likely refers t
     config: MultiProviderLLMConfig,
     maxTokens: number
   ): Promise<LLMResponse> {
-    const { claudeMessages, systemPrompt } = this.convertToClaude(messages);
+    const body = buildAnthropicBody(messages, config.model, { maxTokens });
+    const json = await this.makeRequest({
+      url: `${AI_PROVIDERS.claude.endpoint}/messages`,
+      method: 'POST',
+      headers: {
+        'x-api-key': config.apiKey,
+        'anthropic-version': '2023-06-01',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
 
-    const requestBody: Record<string, unknown> = {
-      model: config.model,
-      messages: claudeMessages,
-      max_tokens: maxTokens,
-    };
-
-    if (systemPrompt) {
-      requestBody.system = systemPrompt;
-    }
-
-    try {
-      const response = await requestUrl({
-        url: `${AI_PROVIDERS.claude.endpoint}/messages`,
-        method: 'POST',
-        headers: {
-          'x-api-key': config.apiKey,
-          'anthropic-version': '2023-06-01',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      });
-
-      const data = response.json;
-
-      if (data.error) {
-        return { success: false, content: '', error: data.error.message };
-      }
-
-      const content = data.content
-        ?.filter((block: { type: string }) => block.type === 'text')
-        .map((block: { text: string }) => block.text)
-        .join('') || '';
-
-      return {
-        success: true,
-        content,
-        usage: data.usage ? {
-          promptTokens: data.usage.input_tokens,
-          completionTokens: data.usage.output_tokens,
-          totalTokens: data.usage.input_tokens + data.usage.output_tokens,
-        } : undefined,
-      };
-    } catch (error) {
-      return this.handleError(error);
-    }
+    const result = parseAnthropicResponse(json);
+    return this.mapResponse(result);
   }
 
   private async generateOpenAI(
@@ -244,52 +220,19 @@ Provide a brief description (2-3 sentences) of what this concept likely refers t
     config: MultiProviderLLMConfig,
     maxTokens: number
   ): Promise<LLMResponse> {
-    try {
-      // OpenAI Reasoning 모델 (gpt-5.x, o1, o3)은 max_completion_tokens 사용
-      const isReasoning = isReasoningModel(config.model);
+    const body = buildOpenAIBody(messages, config.model, { maxTokens });
+    const json = await this.makeRequest({
+      url: `${AI_PROVIDERS.openai.endpoint}/chat/completions`,
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${config.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
 
-      const requestBody: Record<string, unknown> = {
-        model: config.model,
-        messages: messages.map((m) => ({ role: m.role, content: m.content })),
-      };
-
-      if (isReasoning) {
-        // Reasoning 모델은 더 많은 토큰 예산 필요 (추론에 사용됨)
-        requestBody.max_completion_tokens = Math.max(maxTokens * 4, 4096);
-      } else {
-        requestBody.max_tokens = maxTokens;
-      }
-
-      const response = await requestUrl({
-        url: `${AI_PROVIDERS.openai.endpoint}/chat/completions`,
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${config.apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      });
-
-      const data = response.json;
-
-      if (data.error) {
-        return { success: false, content: '', error: data.error.message };
-      }
-
-      const content = data.choices?.[0]?.message?.content || '';
-
-      return {
-        success: true,
-        content,
-        usage: data.usage ? {
-          promptTokens: data.usage.prompt_tokens,
-          completionTokens: data.usage.completion_tokens,
-          totalTokens: data.usage.total_tokens,
-        } : undefined,
-      };
-    } catch (error) {
-      return this.handleError(error);
-    }
+    const result = parseOpenAIResponse(json);
+    return this.mapResponse(result);
   }
 
   private async generateGemini(
@@ -297,45 +240,17 @@ Provide a brief description (2-3 sentences) of what this concept likely refers t
     config: MultiProviderLLMConfig,
     maxTokens: number
   ): Promise<LLMResponse> {
-    const contents = this.convertToGemini(messages);
+    const body = buildGeminiBody(messages, config.model, { maxTokens });
+    const url = getGeminiGenerateUrl(config.model, config.apiKey, AI_PROVIDERS.gemini.endpoint);
+    const json = await this.makeRequest({
+      url,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
 
-    try {
-      const url = `${AI_PROVIDERS.gemini.endpoint}/models/${config.model}:generateContent?key=${config.apiKey}`;
-
-      const response = await requestUrl({
-        url,
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents,
-          generationConfig: {
-            maxOutputTokens: maxTokens,
-          },
-        }),
-      });
-
-      const data = response.json;
-
-      if (data.error) {
-        return { success: false, content: '', error: data.error.message };
-      }
-
-      const content = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-      return {
-        success: true,
-        content,
-        usage: data.usageMetadata ? {
-          promptTokens: data.usageMetadata.promptTokenCount || 0,
-          completionTokens: data.usageMetadata.candidatesTokenCount || 0,
-          totalTokens: data.usageMetadata.totalTokenCount || 0,
-        } : undefined,
-      };
-    } catch (error) {
-      return this.handleError(error);
-    }
+    const result = parseGeminiResponse(json);
+    return this.mapResponse(result);
   }
 
   private async generateGrok(
@@ -343,87 +258,39 @@ Provide a brief description (2-3 sentences) of what this concept likely refers t
     config: MultiProviderLLMConfig,
     maxTokens: number
   ): Promise<LLMResponse> {
-    // Grok uses OpenAI-compatible API
-    try {
-      const response = await requestUrl({
-        url: `${AI_PROVIDERS.grok.endpoint}/chat/completions`,
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${config.apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: config.model,
-          messages: messages.map((m) => ({ role: m.role, content: m.content })),
-          max_tokens: maxTokens,
-        }),
-      });
+    const body = buildGrokBody(messages, config.model, { maxTokens });
+    const json = await this.makeRequest({
+      url: `${AI_PROVIDERS.grok.endpoint}/chat/completions`,
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${config.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
 
-      const data = response.json;
-
-      if (data.error) {
-        return { success: false, content: '', error: data.error.message };
-      }
-
-      const content = data.choices?.[0]?.message?.content || '';
-
-      return {
-        success: true,
-        content,
-        usage: data.usage ? {
-          promptTokens: data.usage.prompt_tokens,
-          completionTokens: data.usage.completion_tokens,
-          totalTokens: data.usage.total_tokens,
-        } : undefined,
-      };
-    } catch (error) {
-      return this.handleError(error);
-    }
+    const result = parseGrokResponse(json);
+    return this.mapResponse(result);
   }
 
-  private convertToClaude(messages: AIMessage[]): {
-    claudeMessages: { role: 'user' | 'assistant'; content: string }[];
-    systemPrompt: string | null;
-  } {
-    const claudeMessages: { role: 'user' | 'assistant'; content: string }[] = [];
-    let systemPrompt: string | null = null;
-
-    for (const msg of messages) {
-      if (msg.role === 'system') {
-        systemPrompt = msg.content;
-      } else {
-        claudeMessages.push({
-          role: msg.role as 'user' | 'assistant',
-          content: msg.content,
-        });
-      }
-    }
-
-    return { claudeMessages, systemPrompt };
+  private async makeRequest(options: Parameters<typeof requestUrl>[0]): Promise<Record<string, unknown>> {
+    const response = await requestUrl(options);
+    return response.json as Record<string, unknown>;
   }
 
-  private convertToGemini(messages: AIMessage[]): { role: string; parts: { text: string }[] }[] {
-    const contents: { role: string; parts: { text: string }[] }[] = [];
-
-    for (const msg of messages) {
-      if (msg.role === 'system') {
-        // Gemini doesn't have system role, prepend to first user message
-        continue;
-      }
-
-      contents.push({
-        role: msg.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: msg.content }],
-      });
+  private mapResponse(result: { success: boolean; text: string; usage: { inputTokens: number; outputTokens: number; totalTokens: number }; error?: string }): LLMResponse {
+    if (!result.success) {
+      return { success: false, content: '', error: result.error };
     }
-
-    // Prepend system message to first user message if exists
-    const systemMsg = messages.find((m) => m.role === 'system');
-    if (systemMsg && contents.length > 0) {
-      contents[0].parts[0].text = `${systemMsg.content}\n\n${contents[0].parts[0].text}`;
-    }
-
-    return contents;
+    return {
+      success: true,
+      content: result.text,
+      usage: {
+        promptTokens: result.usage.inputTokens,
+        completionTokens: result.usage.outputTokens,
+        totalTokens: result.usage.totalTokens,
+      },
+    };
   }
 
   private handleError(error: unknown): LLMResponse {
