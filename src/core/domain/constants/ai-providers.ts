@@ -27,7 +27,7 @@ export const AI_PROVIDERS: Record<AIProviderType, AIProviderConfig> = {
     id: 'openai',
     name: 'OpenAI',
     displayName: 'OpenAI GPT',
-    defaultModel: 'gpt-5-mini',
+    defaultModel: 'gpt-5.4-mini',
     endpoint: 'https://api.openai.com/v1',
     apiKeyPrefix: 'sk-',
   },

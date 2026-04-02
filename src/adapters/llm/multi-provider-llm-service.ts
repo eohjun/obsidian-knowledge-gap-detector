@@ -49,19 +49,45 @@ export class MultiProviderLLMService implements ILLMService {
   async testApiKey(provider: AIProviderType, apiKey: string): Promise<boolean> {
     try {
       const providerConfig = AI_PROVIDERS[provider];
-      const testConfig: MultiProviderLLMConfig = {
-        provider,
-        apiKey,
-        model: providerConfig.defaultModel,
-      };
 
-      const response = await this.generateWithConfig(
-        [{ role: 'user', content: 'Hello' }],
-        testConfig,
-        10
-      );
-
-      return response.success;
+      switch (provider) {
+        case 'openai': {
+          const res = await requestUrl({
+            url: `${providerConfig.endpoint}/models`,
+            method: 'GET',
+            headers: { Authorization: `Bearer ${apiKey}` },
+          });
+          return Array.isArray(res.json?.data);
+        }
+        case 'claude': {
+          const res = await requestUrl({
+            url: `${providerConfig.endpoint}/models`,
+            method: 'GET',
+            headers: {
+              'x-api-key': apiKey,
+              'anthropic-version': '2023-06-01',
+            },
+          });
+          return Array.isArray(res.json?.data);
+        }
+        case 'gemini': {
+          const res = await requestUrl({
+            url: `${providerConfig.endpoint}/models?key=${apiKey}`,
+            method: 'GET',
+          });
+          return Array.isArray(res.json?.models);
+        }
+        case 'grok': {
+          const res = await requestUrl({
+            url: `${providerConfig.endpoint}/models`,
+            method: 'GET',
+            headers: { Authorization: `Bearer ${apiKey}` },
+          });
+          return Array.isArray(res.json?.data);
+        }
+        default:
+          return false;
+      }
     } catch {
       return false;
     }

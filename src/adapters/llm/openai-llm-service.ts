@@ -32,7 +32,7 @@ export class OpenAILLMService implements ILLMService {
   constructor(config: Partial<OpenAIConfig> = {}) {
     this.config = {
       apiKey: config.apiKey || '',
-      model: config.model || 'gpt-5-nano',
+      model: config.model || 'gpt-5.4-nano',
       maxTokens: config.maxTokens || 500,
       temperature: config.temperature || 0.7,
     };
